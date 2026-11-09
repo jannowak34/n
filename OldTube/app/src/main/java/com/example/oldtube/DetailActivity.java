@@ -47,7 +47,7 @@ public class DetailActivity extends Activity {
         findViewById(R.id.player).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Intent intent = new Intent(DetailActivity.this, PlayerActivity.class);
-                intent.putExtra(PlayerActivity.EXTRA_URL, Api.streamUrl(videoId));
+                intent.putExtra(PlayerActivity.EXTRA_ID, videoId);
                 startActivity(intent);
             }
         });

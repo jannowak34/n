@@ -67,9 +67,42 @@ public class Api {
         return BASE + "/vi/" + videoId + "/mqdefault.jpg";
     }
 
-    /** 360p MP4 (itag 18) is the format old phones are most likely to play. */
-    public static String streamUrl(String videoId) {
+    /** Last-resort stream address: 360p MP4 (itag 18) proxied through the server. */
+    public static String fallbackStream(String videoId) {
         return BASE + "/latest_version?id=" + videoId + "&itag=18&local=true";
+    }
+
+    /**
+     * Asks the server for the video's streams and picks one that old phones can play
+     * (360p MP4, itag 18). Falls back to a fixed address if anything goes wrong.
+     */
+    public static String resolveStream(String videoId) {
+        try {
+            JSONObject o = new JSONObject(getString("/api/v1/videos/" + videoId + "?local=true"));
+            JSONArray streams = o.optJSONArray("formatStreams");
+            if (streams == null) return fallbackStream(videoId);
+            String best = null;
+            for (int i = 0; i < streams.length(); i++) {
+                JSONObject st = streams.optJSONObject(i);
+                if (st == null) continue;
+                String url = st.optString("url", "");
+                if (url.length() == 0) continue;
+                if ("18".equals(st.optString("itag", ""))) {
+                    best = url;
+                    break;
+                }
+                if (best == null && st.optString("type", "").indexOf("mp4") >= 0) {
+                    best = url;
+                }
+            }
+            if (best == null) return fallbackStream(videoId);
+            if (best.startsWith("/")) best = BASE + best;
+            if (best.startsWith("https://")) best = "http://" + best.substring(8);
+            return best;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return fallbackStream(videoId);
+        }
     }
 
     private static List<Video> parseList(String json) throws Exception {
